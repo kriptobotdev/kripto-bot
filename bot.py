@@ -16,39 +16,40 @@ async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Lutfen coin adi girin. Orn: /price bitcoin")
         return
 
-    coin = context.args[0].lower()
-    coin_id_map = {
-        "bitcoin": "btc-bitcoin",
-        "btc": "btc-bitcoin",
-        "ethereum": "eth-ethereum",
-        "eth": "eth-ethereum",
-        "dogecoin": "doge-dogecoin",
-        "doge": "doge-dogecoin",
-        "solana": "sol-solana",
-        "sol": "sol-solana"
+    coin = context.args[0].upper()
+    
+    coin_map = {
+        "BITCOIN": "BTCUSDT",
+        "BTC": "BTCUSDT",
+        "ETHEREUM": "ETHUSDT",
+        "ETH": "ETHUSDT",
+        "DOGECOIN": "DOGEUSDT",
+        "DOGE": "DOGEUSDT",
+        "SOLANA": "SOLUSDT",
+        "SOL": "SOLUSDT"
     }
+    
+    symbol = coin_map.get(coin, None)
+    if not symbol:
+        await update.message.reply_text(f"HATA: '{coin}' desteklenmiyor. Desteklenen: bitcoin, ethereum, dogecoin, solana")
+        return
 
-    coin_id = coin_id_map.get(coin, coin)
-
-    url = f"https://api.coinpaprika.com/v1/tickers/{coin_id}"
+    url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
 
     try:
-        response = requests.get(url, timeout=15)
+        response = requests.get(url, timeout=10)
         if response.status_code != 200:
-            await update.message.reply_text(f"HATA: '{coin}' bulunamadi.")
+            await update.message.reply_text("HATA: Fiyat alinamadi.")
             return
-
+        
         data = response.json()
-        usd_price = data.get("quotes", {}).get("USD", {}).get("price", None)
-        change = data.get("quotes", {}).get("USD", {}).get("percent_change_24h", 0)
-
-        if usd_price is None:
-            await update.message.reply_text(f"HATA: '{coin}' bulunamadi.")
-            return
+        usd_price = float(data.get("lastPrice", 0))
+        change = float(data.get("priceChangePercent", 0))
 
         emoji = "🟢" if change >= 0 else "🔴"
+        coin_name = coin_map.get(coin, coin)
         await update.message.reply_text(
-            f"💰 {coin.upper()}\n${usd_price:,.2f}\n{emoji} 24s: %{change:.2f}"
+            f"💰 {coin_name.replace('USDT','')}\n${usd_price:,.2f}\n{emoji} 24s: %{change:.2f}"
         )
     except:
         await update.message.reply_text("Fiyat alinamadi, tekrar dene.")
@@ -58,7 +59,8 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Komutlar:\n"
         "/start - Botu baslat\n"
         "/price <coin> - Canli fiyat gor\n"
-        "/yardim - Bu mesaji goster"
+        "/yardim - Bu mesaji goster\n\n"
+        "Desteklenen: bitcoin, ethereum, dogecoin, solana"
     )
 
 def main():
